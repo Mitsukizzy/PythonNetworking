@@ -51,7 +51,7 @@ def main(argv):
         registerdata = data.split(' ')
         if registerdata[0] == 'register':
             client1 = registerdata[1]
-            print "DEBUG NEW CLIENT - addr0: ", addr[0], "addr1: ", addr[1]
+            print client1 + " registered from host " + addr[0] + " port " + str(addr[1])
             sock.sendto("welcome " + client1, (addr[0], addr[1]))
         else:
             print "Message received: ", data

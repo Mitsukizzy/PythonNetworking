@@ -33,19 +33,25 @@ class Client():
 
             if message == "exit":
                 self.shouldExit = True
+                break
 
-            message = "sendto " + message
+            msgparts = message.split(' ')
+            # Expected message input is "sendto <client> <message>"
+            if msgparts[0] != 'sendto' or len(msgparts) <= 2:
+                print "Message format incorrect"
+                continue
+            
+            # Construct message in the format "sendto <client> message <message>"
+            index = message.find(msgparts[2])
+            message = message[:index] + 'message ' + message[index:]
+            print "Message constructed is: " + message
             self.sock.sendto(message, (self.serverip, self.port))
 
     def receive(self):
         print "waiting for messages.."
-        while True:
+        while self.shouldExit == False:
             data = self.sock.recvfrom(1024) # buffer size in bytes
             print "Received: " + data
-            # welcomedata = data[0].split(' ')
-            # if welcomedata[0] == 'welcome':
-            #     client1 = welcomedata[1]
-            #     print "client1 is ", client1
     
     def main(self, argv):
         """Main function in CLIENT"""
@@ -90,6 +96,7 @@ class Client():
         print "connected to server and registered"
         logging.info("received welcome")
             
+        # Thread setup
         self.threadRecv = threading.Thread(target=Client.receive, args=(self,))
         self.threadSend = threading.Thread(target=Client.send, args=(self,))
         self.threadRecv.setDaemon(True)
@@ -98,11 +105,14 @@ class Client():
         self.threadSend.start()       
 
         # Keep main thread alive
-        while self.shouldExit == False:
-            time.sleep(1) 
+        try:
+            while self.shouldExit == False:
+                time.sleep(.1)
+        except KeyboardInterrupt:
+            self.shouldExit = True
+            print "exit"
         
         logging.info("terminating client")
-        print "exit"
 
 client = Client()
 client.main(sys.argv[1:])
