@@ -2,12 +2,14 @@
     Isabella Benavente
     Using Python 2.7.12 
     SERVER Module 
+    USAGE: $ python server.py -p 7021 -l serverlog.txt
 """
 
 import socket
 import sys
 import getopt
 import logging
+import threading
 
 IP = "127.0.0.1"
 
