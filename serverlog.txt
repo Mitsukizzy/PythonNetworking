@@ -1,0 +1,36 @@
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
