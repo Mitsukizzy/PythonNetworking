@@ -122,3 +122,43 @@ INFO:root:recvfrom Izzy to Boba message how about this?
 INFO:root:sendto Boba from Izzy message how about this?
 INFO:root:recvfrom Boba to Izzy message yep got em
 INFO:root:sendto Izzy from Boba message yep got em
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:received register Izzy from host 127.0.0.1 port 57285
+INFO:root:client connection from host 127.0.0.1 port 57285
+INFO:root:received register Boba from host 127.0.0.1 port 57286
+INFO:root:client connection from host 127.0.0.1 port 57286
+INFO:root:sendto Boba from Izzy message hello there
+INFO:root:Boba registered with server
+INFO:root:recvfrom Izzy to Boba message hello there
+INFO:root:sendto client3 from Izzy message hello there
+INFO:root:client3 not registered with server
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:received register Izzy from host 127.0.0.1 port 60963
+INFO:root:client connection from host 127.0.0.1 port 60963
+INFO:root:received register Boba from host 127.0.0.1 port 60964
+INFO:root:client connection from host 127.0.0.1 port 60964
+INFO:root:sendto Izzy from Boba message hi friend
+INFO:root:Izzy registered with server
+INFO:root:recvfrom Boba to Izzy message hi friend
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:received register Izzy from host 127.0.0.1 port 52867
+INFO:root:client connection from host 127.0.0.1 port 52867
+INFO:root:received register Boba from host 127.0.0.1 port 52868
+INFO:root:client connection from host 127.0.0.1 port 52868
+INFO:root:sendto Izzy from Boba message hi friend
+INFO:root:Izzy registered with server
+INFO:root:recvfrom Boba to Izzy message hi friend
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:received register Izzy from host 127.0.0.1 port 52571
+INFO:root:client connection from host 127.0.0.1 port 52571
+INFO:root:received register Boba from host 127.0.0.1 port 51536
+INFO:root:client connection from host 127.0.0.1 port 51536
+INFO:root:sendto Izzy from Boba hi friend
+INFO:root:Izzy registered with server
+INFO:root:recvfrom Boba to Izzy hi friend
+INFO:root:sendto Boba from Izzy hello there
+INFO:root:Boba registered with server
+INFO:root:recvfrom Izzy to Boba hello there
