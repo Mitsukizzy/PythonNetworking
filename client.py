@@ -8,11 +8,10 @@
 # Clients communicate using UDP
 
 import socket
-import sys
+import sys, time
 import getopt
 import logging
 import threading
-import time
 
 class Client():
     
