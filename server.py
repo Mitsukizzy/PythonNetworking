@@ -47,33 +47,36 @@ class Server():
         # Listen/Accept connections on host overlay
         self.overlaysock.listen(10)
         while self.shouldExit == False:
-            connection, conn_addr = self.overlaysock.accept()
+            conn_sock, conn_addr = self.overlaysock.accept()
             print "server joined overlay host " + conn_addr[0] + " port " + str(conn_addr[1])
+            logging.info("server joined overlay from host " + conn_addr[0] + " port " + str(conn_addr[1]))
             # Add connected server to server list
-            self.serverList.append(connection)
+            self.serverList.append(conn_sock)
+            
+             # Spawn a new thread to send/receive from new connection (TCP)
+            self.threadNewConn = threading.Thread(target=Server.handleServerMessages, args=(self,conn_sock))
+            self.threadNewConn.setDaemon(True)
+            self.threadNewConn.start()  
 
-    def sendToAllServers(self, message):
+    def sendToAllServers(self, message, basemessage):
         # Send message to all known servers
         for server in self.serverList:
-            print "Sending to different server"
+            logging.info("sending message to server overlay \"" + basemessage + "\"")
             server.send(message)
 
-    def handleServerMessages(self):     
+    def handleServerMessages(self, conn_sock):     
         # Send/Receive TCP messages with connections   
         while self.shouldExit == False:
-            data = self.servsock.recv(1024)
-            print "Data received: " + data
+            data = conn_sock.recv(1024)
             dataparts = data.split(' ')
-            recipient = dataparts[1]
-            recvIP, recvPort = self.lookupRecipient(recipient)
-            message = data[data.find(dataparts[3]):]
-            logging.info("sendto " + recipient + " from " + sender + " " + message) 
-            #print "Message received: ", data
-            #print recipient + " " + recvIP + " " + str(recvPort) + " " + sender
+            sender = dataparts[1]
+            recipient = dataparts[3]
+            recvIP, recvPort = self.lookupRecipient(recipient)       
+            message = data[data.find(dataparts[5]):]
+            logging.info("sendto " + recipient + " from " + sender + " \"" + message + "\"")
                 
             if recvIP != "unknown" and recvPort != "unknown": 
-                logging.info(recipient + " registered with server")
-                logging.info("recvfrom " + sender + " to " + recipient + " " + message)
+                logging.info("recvfrom " + sender + " to " + recipient + " \"" + message + "\"")
                 message = "recvfrom " + sender + " " + message
                 self.sock.sendto(message, (recvIP, recvPort))
 
@@ -87,8 +90,8 @@ class Server():
                 # Received register, send welcome
                 client = str(dataparts[1])
                 print client + " registered from host " + addr[0] + " port " + str(addr[1])
-                logging.info("received register " + client + " from host " + addr[0] + " port " + str(addr[1]))
                 logging.info("client connection from host " + addr[0] + " port " + str(addr[1]))
+                logging.info("received register " + client + " from host " + addr[0] + " port " + str(addr[1]))
                 self.sock.sendto("welcome " + client, (addr[0], addr[1]))            
                 self.lookupDict[client] = (addr[0], addr[1])
             # Received message, send to intended client
@@ -97,22 +100,18 @@ class Server():
                 recvIP, recvPort = self.lookupRecipient(recipient)
                 sender = self.lookupSender(addr[0], addr[1])
                 message = data[data.find(dataparts[3]):]
-                logging.info("sendto " + recipient + " from " + sender + " " + message) 
-                #print "Message received: ", data
-                #print recipient + " " + recvIP + " " + str(recvPort) + " " + sender
+                logging.info("sendto " + recipient + " from " + sender + " \"" + message + "\"") 
                 
                 if recvIP != "unknown" and recvPort != "unknown": 
-                    logging.info(recipient + " registered with server")
-                    logging.info("recvfrom " + sender + " to " + recipient + " " + message)
+                    logging.info("recvfrom " + sender + " to " + recipient + " \"" + message + "\"")
                     message = "recvfrom " + sender + " " + message
                     self.sock.sendto(message, (recvIP, recvPort))
                 else:                
                     # Recipient not found on this server, try sending message to other servers
                     logging.info(recipient + " not registered with server")
-                    self.sendToAllServers(data)
+                    data = "recvfrom " + sender + " " + data
+                    self.sendToAllServers(data, message)
     
-
-
     def main(self, argv):
         """Main function in SERVER"""
 
@@ -139,7 +138,8 @@ class Server():
             elif opt in ("-l", "--logfile"):
                 logfile = arg
         
-        logging.basicConfig(filename=logfile, level=logging.DEBUG)
+        # Configure log file path, format, and clear file each time using write mode
+        logging.basicConfig(filename=logfile, level=logging.DEBUG, format='%(message)s', filemode ='w')
         logging.info("server started on " + IP + " at port " + port)
 
         # Parameters are to specify internet and UDP
@@ -148,12 +148,12 @@ class Server():
 
         if self.serverip != '' and self.serverport != '':
             # TCP Socket for Server-Server connections
-            self.servsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.servsock.connect((self.serverip, int(self.serverport)))
-            self.serverList.append(self.servsock)
+            conn_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            conn_sock.connect((self.serverip, int(self.serverport)))
+            self.serverList.append(conn_sock)
             
             # Thread setup for TCP Server sending/receiving
-            self.threadServer = threading.Thread(target=Server.handleServerMessages, args=(self,))
+            self.threadServer = threading.Thread(target=Server.handleServerMessages, args=(self,conn_sock))
             self.threadServer.setDaemon(True)
             self.threadServer.start()     
 
@@ -161,7 +161,7 @@ class Server():
             self.overlaysock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.overlaysock.bind((IP, int(self.overlayport)))
 
-            print "server overlay started at port " + self.overlayport
+            logging.info("server overlay started at port " + self.overlayport)
 
              # Thread setup for TCP Server listening/accepting
             self.threadListen = threading.Thread(target=Server.listen, args=(self,))

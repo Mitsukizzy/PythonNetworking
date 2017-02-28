@@ -41,6 +41,8 @@ class Client():
                 print "Message format incorrect, part0 is " + msgparts[0] + " and len is " + str( len(msgparts) )
                 continue
             
+            logging.info(message)
+
             # Construct message in the format "sendto <client> message <message>"
             index = message.find(msgparts[2])
             message = message[:index] + 'message ' + message[index:]
@@ -50,6 +52,7 @@ class Client():
         print "waiting for messages.."
         while self.shouldExit == False:
             data = self.sock.recvfrom(1024) # buffer size in bytes
+            logging.info(data[0])
             print data[0]
     
     def main(self, argv):
@@ -75,7 +78,8 @@ class Client():
             elif opt in ("-n", "--myname"):
                 clientname = arg
 
-        logging.basicConfig(filename=logfile, level=logging.DEBUG)
+        # Configure log file path, format, and clear file each time using write mode
+        logging.basicConfig(filename=logfile, level=logging.DEBUG, format='%(message)s', filemode ='w')
         logging.info("connecting to the server " + serverip + " at port " + port)
         
         # For ease of use in instance function
@@ -110,7 +114,7 @@ class Client():
             self.shouldExit = True
             print "exit"
         
-        logging.info("terminating client")
+        logging.info("terminating client..")
 
 client = Client()
 client.main(sys.argv[1:])
