@@ -67,3 +67,58 @@ INFO:root:received register  from host  port
 INFO:root:server started on 127.0.0.1 at port 7021
 INFO:root:client connection from host 127.0.0.1 port 7021
 INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:someone not registered with server
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:someone not registered with server
+INFO:root:recvfrom Izzy to someone message hi
+INFO:root:sendto someone from Izzy message hi
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:someone not registered with server
+INFO:root:recvfrom Izzy to someone message hi
+INFO:root:sendto someone from Izzy message hi
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:aohwdioahd not registered with server
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:recvfrom Izzy to Izzy message hi
+INFO:root:sendto Izzy from Izzy message hi
+INFO:root:recvfrom Izzy to Izzy message hi
+INFO:root:sendto Izzy from Izzy message hi
+INFO:root:recvfrom Boba to Izzy message hi
+INFO:root:sendto Izzy from Boba message hi
+INFO:root:recvfrom Boba to Boba message are you
+INFO:root:sendto Boba from Boba message are you
+INFO:root:recvfrom Boba to Izzy message how are you
+INFO:root:sendto Izzy from Boba message how are you
+INFO:root:server started on 127.0.0.1 at port 7021
+INFO:root:client connection from host 127.0.0.1 port 7021
+INFO:root:received register  from host  port
+INFO:root:recvfrom Izzy to Boba message hey buddy
+INFO:root:sendto Boba from Izzy message hey buddy
+INFO:root:recvfrom Boba to Izzy message hi wahts upp
+INFO:root:sendto Izzy from Boba message hi wahts upp
+INFO:root:recvfrom Boba to Izzy message what the
+INFO:root:sendto Izzy from Boba message what the
+INFO:root:recvfrom Izzy to Boba message uhh you there
+INFO:root:sendto Boba from Izzy message uhh you there
+INFO:root:recvfrom Izzy to Boba message uhhh
+INFO:root:sendto Boba from Izzy message uhhh
+INFO:root:recvfrom Izzy to Boba message alright will this work hmm
+INFO:root:sendto Boba from Izzy message alright will this work hmm
+INFO:root:recvfrom Izzy to Boba message how about this?
+INFO:root:sendto Boba from Izzy message how about this?
+INFO:root:recvfrom Boba to Izzy message yep got em
+INFO:root:sendto Izzy from Boba message yep got em

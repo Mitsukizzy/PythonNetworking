@@ -4,6 +4,7 @@
     CLIENT Module 
     USAGE: $ python client.py -s 127.0.0.1 -p 7021 -l clientlog.txt -n Izzy
 """
+#!/usr/bin/python2 
 # Clients communicate using UDP
 
 import socket
@@ -38,7 +39,7 @@ class Client():
             msgparts = message.split(' ')
             # Expected message input is "sendto <client> <message>"
             if msgparts[0] != 'sendto' or len(msgparts) <= 2:
-                print "Message format incorrect"
+                print "Message format incorrect, part0 is " + msgparts[0] + " and len is " + str( len(msgparts) )
                 continue
             
             # Construct message in the format "sendto <client> message <message>"
@@ -51,7 +52,7 @@ class Client():
         print "waiting for messages.."
         while self.shouldExit == False:
             data = self.sock.recvfrom(1024) # buffer size in bytes
-            print "Received: " + data
+            print "Received: " + data[0]
     
     def main(self, argv):
         """Main function in CLIENT"""

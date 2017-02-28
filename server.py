@@ -4,6 +4,7 @@
     SERVER Module 
     USAGE: $ python server.py -p 7021 -l serverlog.txt
 """
+#!/usr/bin/python2 
 
 import socket
 import sys
@@ -18,8 +19,22 @@ def main(argv):
 
     port = ''
     logfile = ''
-    client1 = ''
-    
+    client = ''
+    lookupDict = {}
+
+    def lookupSender(clientip, clientport):
+        for clientname, clientdata in lookupDict.items():
+            if clientdata[0] == clientip and clientdata[1] == clientport:
+                return clientname
+        return "unknown"
+
+    def lookupRecipient(clientname):
+        if lookupDict.has_key(clientname):
+            return lookupDict[clientname]   
+        
+        logging.info(clientname + " not registered with server") 
+        return "unknown", "unknown"
+
     try:
         opts, args = getopt.getopt(argv, "hp:l:", ["portno=", "logfile="])
     except getopt.GetoptError:
@@ -48,15 +63,25 @@ def main(argv):
         data, addr = sock.recvfrom(1024) # buffer size in bytes
 
         # Received register, send welcome
-        registerdata = data.split(' ')
-        if registerdata[0] == 'register':
-            client1 = registerdata[1]
-            print client1 + " registered from host " + addr[0] + " port " + str(addr[1])
-            sock.sendto("welcome " + client1, (addr[0], addr[1]))
+        dataparts = data.split(' ')
+        if dataparts[0] == 'register':
+            client = str(dataparts[1])
+            print client + " registered from host " + addr[0] + " port " + str(addr[1])
+            sock.sendto("welcome " + client, (addr[0], addr[1]))            
+            lookupDict[client] = (addr[0], addr[1])
+        # Received message, send to intended client
         else:
+            recipient = dataparts[1]
+            recvIP, recvPort = lookupRecipient(recipient)
+            sender = lookupSender(addr[0], addr[1])
+            message = data[data.find("message"):]
             print "Message received: ", data
-            print "From addr: ", addr
 
+            print recipient + " " + recvIP + " " + str(recvPort) + " " + sender
+            if recvIP != "unknown" and recvPort != "unknown":            
+                logging.info("recvfrom " + sender + " to " + recipient + " " + message)
+                logging.info("sendto " + recipient + " from " + sender + " " + message)
+                sock.sendto(data, (recvIP, recvPort))
 
     logging.info("terminating server")
 
