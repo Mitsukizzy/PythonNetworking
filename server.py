@@ -2,7 +2,8 @@
     Isabella Benavente
     Using Python 2.7.12 
     SERVER Module 
-    USAGE: $ python server.py -p 7021 -l serverlog.txt
+    USAGE: $ python server.py -o 7030 -p 7021 -l server1log.txt
+    USAGE: $ python server.py -s 127.0.0.1 -t 7030 -p 7022 -l server2log.txt
 """
 #!/usr/bin/python2 
 
@@ -28,6 +29,7 @@ class Server():
         self.serverport = ''
         self.overlayport = ''
         self.lookupDict = {}
+        self.serverList = []
 
     # Function declarations
     def lookupSender(self, clientip, clientport):
@@ -42,23 +44,47 @@ class Server():
         return "unknown", "unknown"
 
     def listen(self):
+        # Listen/Accept connections on host overlay
+        self.overlaysock.listen(10)
         while self.shouldExit == False:
-            self.connection, self.conn_addr =  self.overlaysock.accept()
+            connection, conn_addr = self.overlaysock.accept()
+            print "server joined overlay host " + conn_addr[0] + " port " + str(conn_addr[1])
+            # Add connected server to server list
+            self.serverList.append(connection)
 
-    def accept(self):        
+    def sendToAllServers(self, message):
+        # Send message to all known servers
+        for server in self.serverList:
+            print "Sending to different server"
+            server.send(message)
+
+    def handleServerMessages(self):     
+        # Send/Receive TCP messages with connections   
         while self.shouldExit == False:
-            data = self.connection.recv(1024)
+            data = self.servsock.recv(1024)
             print "Data received: " + data
-
+            dataparts = data.split(' ')
+            recipient = dataparts[1]
+            recvIP, recvPort = self.lookupRecipient(recipient)
+            message = data[data.find(dataparts[3]):]
+            logging.info("sendto " + recipient + " from " + sender + " " + message) 
+            #print "Message received: ", data
+            #print recipient + " " + recvIP + " " + str(recvPort) + " " + sender
+                
+            if recvIP != "unknown" and recvPort != "unknown": 
+                logging.info(recipient + " registered with server")
+                logging.info("recvfrom " + sender + " to " + recipient + " " + message)
+                message = "recvfrom " + sender + " " + message
+                self.sock.sendto(message, (recvIP, recvPort))
 
     def handleClientMessages(self):
         # Constantly wait to receive messages
         while self.shouldExit == False:
             data, addr = self.sock.recvfrom(1024) # buffer size in bytes
 
-            # Received register, send welcome
             dataparts = data.split(' ')
             if dataparts[0] == 'register':
+                # Received register, send welcome
                 client = str(dataparts[1])
                 print client + " registered from host " + addr[0] + " port " + str(addr[1])
                 logging.info("received register " + client + " from host " + addr[0] + " port " + str(addr[1]))
@@ -81,7 +107,11 @@ class Server():
                     message = "recvfrom " + sender + " " + message
                     self.sock.sendto(message, (recvIP, recvPort))
                 else:                
-                    logging.info(recipient + " not registered with server") 
+                    # Recipient not found on this server, try sending message to other servers
+                    logging.info(recipient + " not registered with server")
+                    self.sendToAllServers(data)
+    
+
 
     def main(self, argv):
         """Main function in SERVER"""
@@ -120,17 +150,28 @@ class Server():
             # TCP Socket for Server-Server connections
             self.servsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.servsock.connect((self.serverip, int(self.serverport)))
+            self.serverList.append(self.servsock)
+            
+            # Thread setup for TCP Server sending/receiving
+            self.threadServer = threading.Thread(target=Server.handleServerMessages, args=(self,))
+            self.threadServer.setDaemon(True)
+            self.threadServer.start()     
+
         elif self.overlayport != '':
             self.overlaysock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.overlaysock.bind((IP, int(self.overlayport)))
+
+            print "server overlay started at port " + self.overlayport
+
+             # Thread setup for TCP Server listening/accepting
             self.threadListen = threading.Thread(target=Server.listen, args=(self,))
             self.threadListen.setDaemon(True)
             self.threadListen.start()  
 
-        # Thread setup
-        self.threadRecv = threading.Thread(target=Server.handleClientMessages, args=(self,))
-        self.threadRecv.setDaemon(True)
-        self.threadRecv.start()     
+        # Thread setup for UDP Client messaging
+        self.threadClient = threading.Thread(target=Server.handleClientMessages, args=(self,))
+        self.threadClient.setDaemon(True)
+        self.threadClient.start()     
 
         # Keep main thread alive
         try:

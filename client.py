@@ -2,7 +2,8 @@
     Isabella Benavente
     Using Python 2.7.12 
     CLIENT Module 
-    USAGE: $ python client.py -s 127.0.0.1 -p 7021 -l clientlog.txt -n Izzy
+    USAGE: $ python client.py -s 127.0.0.1 -p 7022 -l client1log.txt -n Alice
+    USAGE: $ python client.py -s 127.0.0.1 -p 7021 -l client2log.txt -n Bob
 """
 #!/usr/bin/python2 
 # Clients communicate using UDP

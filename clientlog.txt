@@ -262,3 +262,25 @@ INFO:root:terminating client
 INFO:root:connecting to the server 127.0.0.1 at port 7021
 INFO:root:sending register message Izzy
 INFO:root:received welcome
+INFO:root:terminating client
+INFO:root:terminating client
+INFO:root:connecting to the server 127.0.0.1 at port 7021
+INFO:root:sending register message Boba
+INFO:root:received welcome
+INFO:root:connecting to the server 127.0.0.1 at port 7022
+INFO:root:sending register message Izzy
+INFO:root:received welcome
+INFO:root:terminating client
+INFO:root:connecting to the server 127.0.0.1 at port 7022
+INFO:root:sending register message Izzy
+INFO:root:received welcome
+INFO:root:terminating client
+INFO:root:terminating client
+INFO:root:connecting to the server 127.0.0.1 at port 7021
+INFO:root:sending register message Boba
+INFO:root:received welcome
+INFO:root:connecting to the server 127.0.0.1 at port 7022
+INFO:root:sending register message Izzy
+INFO:root:received welcome
+INFO:root:terminating client
+INFO:root:terminating client
