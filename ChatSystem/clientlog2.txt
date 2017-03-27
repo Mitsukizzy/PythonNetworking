@@ -1,0 +1,5 @@
+connecting to the server 127.0.0.1 at port 7021
+sending register message Alice
+received welcome
+recvfrom Boba hey there what's up
+terminating client..

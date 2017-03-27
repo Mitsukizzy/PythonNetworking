@@ -1,0 +1,6 @@
+server started on 127.0.0.1 at port 7022
+client connection from host 127.0.0.1 port 54863
+received register Izzy from host 127.0.0.1 port 54863
+sendto Izzy from Boba "oh hey what time is it there?"
+recvfrom Boba to Izzy "oh hey what time is it there?"
+terminating server...

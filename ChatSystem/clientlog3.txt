@@ -1,0 +1,5 @@
+connecting to the server 127.0.0.1 at port 7022
+sending register message Izzy
+received welcome
+recvfrom Boba oh hey what time is it there?
+terminating client..
