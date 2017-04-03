@@ -32,7 +32,6 @@ class Ping():
         # Need to run as root for ICMP (use sudo)
         try: 
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
-            self.sock.setblocking(0)
             self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
 
         except socket.error, message:
@@ -57,15 +56,18 @@ class Ping():
 
     def makePacket(self, idnum, payload):
         checksum = self.getChecksum(payload)
-        print "checksum: " + str(checksum)
-        packet = struct.pack("bbHHh", 8, 0, checksum, idnum, 1)
-        packet = packet + payload
+        header = struct.pack("bbHHh", 8, 0, 0, idnum, 1)
+    	packet = 192 * 'F' + payload
+        checksum = self.getChecksum(header + packet)
+        header = struct.pack("bbHHh", 8, 0, checksum, idnum, 1)
+        packet = header + packet
         return packet
 
     def receive(self):
         while self.shouldExit == False:
             print "Waiting for reply"
             reply, rcvAddr = self.sock.recvfrom(2048) # buffer size in bytes
+            print "Got reply"
             header = reply[20:28]
             type, code, checksum, packet_id, sequence = struct.unpack("BBHHH", header)
             print "Reply from " + ": bytes=" + " time=" + "ms TTL=" + self.TTL
@@ -113,8 +115,8 @@ class Ping():
             logging.info("Payload: " + payload + ", Count: " + str(self.count) + ", Destination: " + dst)
 
         self.src = socket.gethostbyname(socket.gethostname())
-        print "Source IP: " + self.src
-        # packet = IP(src=src, dst=dst)/ICMP()
+        #print "Source IP: " + self.src
+        #packet = IP(src=src, dst=dst)/ICMP()
         # srloop(packet, count=3)
 
         # For ease of use in instance function
@@ -127,7 +129,6 @@ class Ping():
         #     client1 = welcomedata[1]
 
         print "Payload: " + payload + ", Count: " + str(self.count) + ", Destination: " + dst
-        logging.info("received welcome")
 
         idnum = int((id(self.TTL) * random.random()) % 65535)
         packet = self.makePacket(idnum, payload)   
@@ -135,7 +136,7 @@ class Ping():
         
         while packet:   
             print "Pinging " + dst + " with " + str(len(payload)) + " bytes of data \"" + payload + "\""
-            self.sock.sendto(packet, (dst, port))
+            sent = self.sock.sendto(packet, (dst, 1))
             packet = packet[sent:]
 
         # Sent out packets
