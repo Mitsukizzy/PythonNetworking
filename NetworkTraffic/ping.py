@@ -9,7 +9,7 @@
 import socket
 import sys, time
 import struct
-import hashlib
+import pcap
 import getopt
 import logging
 import random
@@ -31,10 +31,12 @@ class Ping():
         # Init socket, parameters are to specify internet, raw socket, and int type
         # Need to run as root for ICMP (use sudo)
         try: 
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
             self.sock.setblocking(0)
+            self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+
         except socket.error, message:
-            print 'Socket creation failed. Error: ' + str(msg[0]) + ' Message ' + msg[1]
+            print 'Socket creation failed. Error: ' + str(message[0]) + ' Message ' + message[1]
             sys.exit()
             
         self.shouldExit = False
@@ -63,7 +65,7 @@ class Ping():
     def receive(self):
         while self.shouldExit == False:
             print "Waiting for reply"
-            reply, rcvAddr = self.sock.recvfrom(1024) # buffer size in bytes
+            reply, rcvAddr = self.sock.recvfrom(2048) # buffer size in bytes
             header = reply[20:28]
             type, code, checksum, packet_id, sequence = struct.unpack("BBHHH", header)
             print "Reply from " + ": bytes=" + " time=" + "ms TTL=" + self.TTL
@@ -72,7 +74,7 @@ class Ping():
             print data[0]
 
             if self.rcvd == self.count:
-                Client.showSummary(self)
+                self.showSummary(self)
 
     def showSummary(self):
         print "Ping statistics for " + dst
@@ -129,10 +131,11 @@ class Ping():
 
         idnum = int((id(self.TTL) * random.random()) % 65535)
         packet = self.makePacket(idnum, payload)   
+        print "packet: " + packet
         
         while packet:   
             print "Pinging " + dst + " with " + str(len(payload)) + " bytes of data \"" + payload + "\""
-            sent = self.sock.sendto(packet, (dst, 1))
+            self.sock.sendto(packet, (dst, port))
             packet = packet[sent:]
 
         # Sent out packets
