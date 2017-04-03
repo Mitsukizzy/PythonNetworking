@@ -9,9 +9,10 @@
 import socket
 import sys, time
 import struct
+import hashlib
 import getopt
 import logging
-import threading
+import random
 
 ECHO_REQUEST = 8
 
@@ -29,22 +30,42 @@ class Ping():
     def __init__(self):        
         # Init socket, parameters are to specify internet, raw socket, and int type
         # Need to run as root for ICMP (use sudo)
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
+        try: 
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+            self.sock.setblocking(0)
+        except socket.error, message:
+            print 'Socket creation failed. Error: ' + str(msg[0]) + ' Message ' + msg[1]
+            sys.exit()
+            
         self.shouldExit = False
 
-    def send(self, dst, payload):    
-        idnum = self.sent
-        packet = struct.pack("bbHHh", ECHO_REQUEST, 0, idnum, idnum, 1)
-        packet += payload
-        print "Pinging " + dst + " with " + str(len(payload)) + " bytes of data \"" + payload + "\""
+    def getChecksum(self, payload):
+        # Got this checksum function from an article on BinaryTides
+        checksum = 0
+        
+        for i in range(0, len(payload)-1, 2):
+            w = ord(payload[i]) + (ord(payload[i+1]) << 8 )
+            checksum = checksum + w
+        
+        checksum = (checksum>>16) + (checksum & 0xffff)
+        checksum = checksum + (checksum >> 16)
+        checksum = ~checksum & 0xffff
+        
+        return int(checksum)
 
-        self.sock.sendto(packet, (self.src, self.port))
-        self.sent += 1
+    def makePacket(self, idnum, payload):
+        checksum = self.getChecksum(payload)
+        print "checksum: " + str(checksum)
+        packet = struct.pack("bbHHh", 8, 0, checksum, idnum, 1)
+        packet = packet + payload
+        return packet
 
     def receive(self):
         while self.shouldExit == False:
-            data = self.sock.recvfrom(1024) # buffer size in bytes
-            reply = struct.unpack(data[0])
+            print "Waiting for reply"
+            reply, rcvAddr = self.sock.recvfrom(1024) # buffer size in bytes
+            header = reply[20:28]
+            type, code, checksum, packet_id, sequence = struct.unpack("BBHHH", header)
             print "Reply from " + ": bytes=" + " time=" + "ms TTL=" + self.TTL
             self.rcvd += 1
             logging.info(data[0])
@@ -80,14 +101,14 @@ class Ping():
             elif opt in ("-p", "--payload"):
                 payload = arg
             elif opt in ("-c", "--count"):
-                self.count = arg                
+                self.count = int(arg)              
             elif opt in ("-d", "--dst"):
                 dst = arg
 
         # Configure log file path, format, and clear file each time using write mode
         if logfile != '':
             logging.basicConfig(filename=logfile, level=logging.DEBUG, format='%(message)s', filemode ='w')
-            logging.info("Payload: " + payload + ", Count: " + self.count + ", Destination: " + dst)
+            logging.info("Payload: " + payload + ", Count: " + str(self.count) + ", Destination: " + dst)
 
         self.src = socket.gethostbyname(socket.gethostname())
         print "Source IP: " + self.src
@@ -103,25 +124,27 @@ class Ping():
         # if welcomedata[0] == 'welcome':
         #     client1 = welcomedata[1]
 
-        print "Payload: " + payload + ", Count: " + self.count + ", Destination: " + dst
+        print "Payload: " + payload + ", Count: " + str(self.count) + ", Destination: " + dst
         logging.info("received welcome")
-            
-        # Thread setup
-        self.threadRecv = threading.Thread(target=Ping.receive, args=(self,))
-        self.threadSend = threading.Thread(target=Ping.send, args=(self,dst,payload))
-        self.threadRecv.setDaemon(True)
-        self.threadSend.setDaemon(True)
-        self.threadRecv.start()
-        self.threadSend.start()       
 
-        # Keep main thread alive
-        try:
-            while self.shouldExit == False:
-                time.sleep(.1)
-        except KeyboardInterrupt:
-            self.shouldExit = True
-            print "exit"
+        idnum = int((id(self.TTL) * random.random()) % 65535)
+        packet = self.makePacket(idnum, payload)   
         
+        while packet:   
+            print "Pinging " + dst + " with " + str(len(payload)) + " bytes of data \"" + payload + "\""
+            sent = self.sock.sendto(packet, (dst, 1))
+            packet = packet[sent:]
+
+        # Sent out packets
+        # for x in range(0, self.count):            
+        #     print "Pinging " + dst + " with " + str(len(payload)) + " bytes of data \"" + payload + "\""
+        #     self.sock.sendto(packet, (dst, self.port))
+        #     self.sent += 1
+
+        # Get ready to receive replies
+        self.receive() 
+        self.sock.close()
+
         logging.info("terminating client..")
 
 ping = Ping()
