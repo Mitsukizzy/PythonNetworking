@@ -1,6 +1,6 @@
 """ Assignment 2 - CSCI 353 Spring 2017
 	Isabella Benavente
-	Using Python 2.7.12 
+	Using Python 2.7.12 and pypcap
 	Traffic Viewer Module 
 	USAGE: $ python trafficviewer.py -i en0 -c 6
 """
@@ -14,24 +14,15 @@ import getopt
 import logging
 import select
 import random
+import decimal
 
 ECHO_CODE = 8
 
-class Ping():
+class Viewer():
 	
 	read = ''
 	count = ''
 	interface = ''
-
-	sent = 0
-	rcvd = 0
-	lost = 0
-
-	TTL = 64
-
-	pmin = TTL
-	pmax = 0
-	psum = 0
 
 	def __init__(self):        
 		# Init socket, parameters are to specify internet, raw socket, and int type
@@ -42,60 +33,6 @@ class Ping():
 		except socket.error, message:
 			print 'Socket creation failed. Error: ' + str(message[0]) + ' Message ' + message[1]
 			sys.exit()
-
-	def getChecksum(self, source_string):
-		# Checksum function source: https://gist.github.com/pklaus/856268
-		sum = 0
-		count_to = (len(source_string) / 2) * 2
-		count = 0
-		while count < count_to:
-			this_val = ord(source_string[count + 1])*256+ord(source_string[count])
-			sum = sum + this_val
-			sum = sum & 0xffffffff # Necessary?
-			count = count + 2
-		if count_to < len(source_string):
-			sum = sum + ord(source_string[len(source_string) - 1])
-			sum = sum & 0xffffffff # Necessary?
-		sum = (sum >> 16) + (sum & 0xffff)
-		sum = sum + (sum >> 16)
-		answer = ~sum
-		answer = answer & 0xffff
-		# Swap bytes. Bugger me if I know why.
-		answer = answer >> 8 | (answer << 8 & 0xff00)
-		return answer
-
-	def makePacket(self, idnum):
-		checksum = self.getChecksum(self.payload)
-		header = struct.pack("BBHHH", ECHO_CODE, 0, 0, idnum, self.sent)
-		checksum = self.getChecksum(header + self.payload)
-		header = struct.pack("BBHHH", ECHO_CODE, 0, socket.htons(checksum), idnum, self.sent)
-		packet = header + self.payload
-		return packet
-
-	def receive(self, id, timeSent):
-		timeLeft = timeSent
-		RTT = 0
-		while timeLeft > 0:
-			status = select.select([self.sock], [], [], timeLeft)
-			RTT = time.time() - timeSent
-			RTT = int(round(RTT * 1000))
-			if RTT > self.TTL:
-				self.lost += 1
-				return
-			data, rcvAddr = self.sock.recvfrom(2048) # buffer size in bytes
-			header = data[20:28]
-			type, code, checksum, pid, seq = struct.unpack("BBHHH", header)
-
-			if id == pid:				
-				reply = data[28:]
-				print "  Reply from " + rcvAddr[0] + ": bytes=" + str(len(reply)) + " time="  + str(RTT) + "ms TTL=" + str(self.TTL)
-
-				self.pmin = min(self.pmin, RTT)
-				self.pmax = max(self.pmax, RTT)
-				self.psum += RTT
-
-				self.rcvd += 1
-				return
 
 	def showSummary(self):
 		pavg = (self.psum / self.sent)
@@ -136,13 +73,12 @@ class Ping():
 				self.read = arg
 
 		# Verify command line args
-		if self.interface == '' and self.read == '':
-			# Interface and read are mutually exclusive, should not both be specified
+		if (self.interface == '' and self.read == '') or (self.interface != '' and self.read != ''):
+			# Interface and read are mutually exclusive, should not both be specified or both empty
 			print "USAGE: sudo test.py -i <interface> -c <count> -r <read> (OPTIONAL: -l <logfile>)"
 			sys.exit(0)
-
-		if (self.interface != '' and self.count == '') or (self.count != '' and self.interface ==''):
-			# Interface and count both need to be set together in order to work
+		elif self.count == '':
+			# Count must always be specified
 			print "USAGE: sudo test.py -i <interface> -c <count> -r <read> (OPTIONAL: -l <logfile>)"
 			sys.exit(0)
 
@@ -151,14 +87,23 @@ class Ping():
 			logging.basicConfig(filename=logfile, level=logging.DEBUG, format='%(message)s', filemode ='w')
 			logging.info("Payload: " + self.payload + ", Count: " + str(self.count) + ", Destination: " + self.dst)
 
-		print "Viewer: listening on " + self.interface
+		if self.interface != '':
+			# Traffic Viewing mode
+			print "Viewer: listening on " + self.interface
 
-		sniffer = pcap.pcap(name=self.interface)
-		addr = lambda pkt, offset: '.'.join(str(ord(pkt[i])) for i in xrange(offset, offset + 4)).ljust(16)
-		for ts, pkt in sniffer:
-			print ts, '\t', addr(pkt, sniffer.dloff + 12), '\t>\tDST', addr(pkt, sniffer.dloff + 16)
+			sniffer = pcap.pcap(name=self.interface, immediate=True)
+			addr = lambda packet, offset: '.'.join(str(ord(packet[i])) for i in xrange(offset, offset + 4)).ljust(16)
+			data = lambda packet, offset: "".join(str(ord(packet[i])) for i in xrange(offset, offset + 2)).ljust(8)
+			tcp = lambda packet, offset: "".join(str(ord(packet[i])) for i in xrange(offset, offset + 4)).ljust(16)
+			for timestamp, packet in sniffer:
+				print "{0:.6f}".format(timestamp) + '  ' + addr(packet, sniffer.dloff + 12) + ">  " + addr(packet, sniffer.dloff + 16) + "| " + data(packet, sniffer.dloff + 8) + "id: " + data(packet, sniffer.dloff + 4) + "seq: " + tcp(packet, sniffer.dloff + 28) + "length: " + data(packet, sniffer.dloff + 2)
+		elif self.read != '':
+			# File Reading mode
+			p = pcap.open(file(self.read))
+			for i in p:
+				print "Packet " + i + " " + p.version + " " + p.length + " " + p.linktype
 
 		logging.info("Exiting network traffic viewer...")
 
-ping = Ping()
-ping.main(sys.argv[1:])
+viewer = Viewer()
+viewer.main(sys.argv[1:])
