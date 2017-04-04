@@ -12,6 +12,7 @@ import struct
 import pcap
 import getopt
 import logging
+import select
 import random
 
 ECHO_CODE = 8
@@ -25,7 +26,12 @@ class Ping():
 	sent = 0
 	rcvd = 0
 	lost = 0
+
 	TTL = 64
+
+	pmin = TTL
+	pmax = 0
+	psum = 0
 
 	def __init__(self):        
 		# Init socket, parameters are to specify internet, raw socket, and int type
@@ -67,26 +73,41 @@ class Ping():
 		packet = header + payload
 		return packet
 
-	def receive(self):
-		print "Waiting for reply"
-		while True:
+	def receive(self, id, timeSent):
+		timeLeft = timeSent
+		RTT = 0
+		while timeLeft > 0:
+			status = select.select([self.sock], [], [], timeLeft)
+			RTT = time.time() - timeSent
+			RTT = int(round(RTT * 1000))
+			if RTT > self.TTL:
+				self.lost += 1
+				print "LOST ONE"
+				return
 			data, rcvAddr = self.sock.recvfrom(2048) # buffer size in bytes
 			header = data[20:28]
-			reply = data[28:]
-			type, code, checksum, packet_id, sequence = struct.unpack("bbHHh", header)
-			print "Reply from " + rcvAddr[0] + ": bytes=" + str(len(reply)) + " time=" + "ms TTL=" + str(self.TTL)
-			self.rcvd += 1
-			print reply
+			type, code, checksum, pid, seq = struct.unpack("BBHHH", header)
 
-			if self.rcvd == self.count:
-				self.showSummary(rcvAddr[0])
-				break
+			if id == pid:				
+				reply = data[28:]
+				print "  Reply from " + rcvAddr[0] + ": bytes=" + str(len(reply)) + " time="  + str(RTT) + "ms TTL=" + str(self.TTL)
+
+				self.pmin = min(self.pmin, RTT)
+				self.pmax = max(self.pmax, RTT)
+				self.psum += RTT
+
+				self.rcvd += 1
+				return
 
 	def showSummary(self, dst):
+		pavg = (self.psum / self.sent)
+		ppct = (self.lost / self.sent) * 100
+		if self.lost == self.sent:
+			self.pmin = 0
 		print "Ping statistics for " + dst
-		print "  Packets: Sent = " + str(self.sent) + ", Received =" + str(self.rcvd) + ", Lost = " + str(self.lost) + "(% loss)"
+		print "  Packets: Sent = " + str(self.sent) + ", Received = " + str(self.rcvd) + ", Lost = " + str(self.lost) + "(" +  str(ppct) + "% loss)"
 		print "  Approximate round trip times in milli-seconds:"
-		print "  Minimum = " + "ms, Maximum =" + "ms, Average =" + "ms"
+		print "  Minimum = " +  str(self.pmin) + "ms, Maximum =" + str(self.pmax) + "ms, Average =" + str(pavg) + "ms"
 
 	
 	def main(self, argv):
@@ -119,23 +140,25 @@ class Ping():
 			logging.info("Payload: " + payload + ", Count: " + str(self.count) + ", Destination: " + dst)
 
 		self.src = socket.gethostbyname(socket.gethostname())
-		print "Payload: " + payload + ", Count: " + str(self.count) + ", Destination: " + dst
+		logging.info("Payload: " + payload + ", Count: " + str(self.count) + ", Destination: " + dst)
 
-		idnum = int((id(self.TTL) * random.random()) % 65535)
-		packet = self.makePacket(idnum, payload)   
-		print "packet: " + packet
+		print "Pinging " + dst + " with " + str(len(payload)) + " bytes of data \"" + payload + "\""
 
 		# Send out packets
-		for x in range(0, self.count):            
-			print "Pinging " + dst + " with " + str(len(payload)) + " bytes of data \"" + payload + "\""
+		for x in range(0, self.count):
+			idnum = random.randrange(65535)
+			packet = self.makePacket(idnum, payload)
+
 			self.sock.sendto(packet, (dst, 0))
 			self.sent += 1
 
-		# Get ready to receive replies
-		self.receive() 
-		self.sock.close()
+			# Get ready to receive replies
+			timeSent = time.time()
+			self.receive(idnum, timeSent) 
 
-		logging.info("terminating client..")
+		self.showSummary(dst)
+		self.sock.close()
+		logging.info("Exiting ping tool...")
 
 ping = Ping()
 ping.main(sys.argv[1:])
