@@ -67,7 +67,6 @@ class Ping():
 	def makePacket(self, idnum, payload):
 		checksum = self.getChecksum(payload)
 		header = struct.pack("BBHHH", ECHO_CODE, 0, 0, idnum, self.sent)
-		payload =  payload
 		checksum = self.getChecksum(header + payload)
 		header = struct.pack("BBHHH", ECHO_CODE, 0, socket.htons(checksum), idnum, self.sent)
 		packet = header + payload
@@ -82,7 +81,6 @@ class Ping():
 			RTT = int(round(RTT * 1000))
 			if RTT > self.TTL:
 				self.lost += 1
-				print "LOST ONE"
 				return
 			data, rcvAddr = self.sock.recvfrom(2048) # buffer size in bytes
 			header = data[20:28]
@@ -102,12 +100,15 @@ class Ping():
 	def showSummary(self, dst):
 		pavg = (self.psum / self.sent)
 		ppct = (self.lost / self.sent) * 100
-		if self.lost == self.sent:
+		if self.rcvd == 0:
 			self.pmin = 0
+
 		print "Ping statistics for " + dst
-		print "  Packets: Sent = " + str(self.sent) + ", Received = " + str(self.rcvd) + ", Lost = " + str(self.lost) + "(" +  str(ppct) + "% loss)"
-		print "  Approximate round trip times in milli-seconds:"
-		print "  Minimum = " +  str(self.pmin) + "ms, Maximum =" + str(self.pmax) + "ms, Average =" + str(pavg) + "ms"
+		print "  Packets: Sent = " + str(self.sent) + ", Received = " + str(self.rcvd) + ", Lost = " + str(self.lost) + " (" +  str(ppct) + "% loss)"
+
+		if self.rcvd > 0:
+			print "  Approximate round trip times in milli-seconds:"
+			print "  Minimum = " +  str(self.pmin) + "ms, Maximum = " + str(self.pmax) + "ms, Average = " + str(pavg) + "ms"
 
 	
 	def main(self, argv):
@@ -142,21 +143,31 @@ class Ping():
 		self.src = socket.gethostbyname(socket.gethostname())
 		logging.info("Payload: " + payload + ", Count: " + str(self.count) + ", Destination: " + dst)
 
-		print "Pinging " + dst + " with " + str(len(payload)) + " bytes of data \"" + payload + "\""
+		disconnected = False
+		initial = True
 
 		# Send out packets
 		for x in range(0, self.count):
 			idnum = random.randrange(65535)
 			packet = self.makePacket(idnum, payload)
 
-			self.sock.sendto(packet, (dst, 0))
+			try:
+				self.sock.sendto(packet, (dst, 0))
+				if initial:
+					print "Pinging " + dst + " with " + str(len(payload)) + " bytes of data \"" + payload + "\""
+					initial = False
+			except:
+				print "Network is unreachable"
+				disconnected = True
+				break
 			self.sent += 1
 
 			# Get ready to receive replies
 			timeSent = time.time()
 			self.receive(idnum, timeSent) 
 
-		self.showSummary(dst)
+		if not disconnected:
+			self.showSummary(dst)
 		self.sock.close()
 		logging.info("Exiting ping tool...")
 
