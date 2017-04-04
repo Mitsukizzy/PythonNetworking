@@ -53,16 +53,15 @@ class Ping():
 		while count < count_to:
 			this_val = ord(source_string[count + 1])*256+ord(source_string[count])
 			sum = sum + this_val
-			sum = sum & 0xffffffff # Necessary?
+			sum = sum & 0xffffffff
 			count = count + 2
 		if count_to < len(source_string):
 			sum = sum + ord(source_string[len(source_string) - 1])
-			sum = sum & 0xffffffff # Necessary?
+			sum = sum & 0xffffffff
 		sum = (sum >> 16) + (sum & 0xffff)
 		sum = sum + (sum >> 16)
 		answer = ~sum
 		answer = answer & 0xffff
-		# Swap bytes. Bugger me if I know why.
 		answer = answer >> 8 | (answer << 8 & 0xff00)
 		return answer
 
