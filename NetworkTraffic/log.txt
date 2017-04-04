@@ -1,3 +1,0 @@
-Payload: hello, Count: 5, Destination: 1.2.3.4
-Pinging 1.2.3.4 with 5 bytes of data "hello"
-Exiting ping tool...

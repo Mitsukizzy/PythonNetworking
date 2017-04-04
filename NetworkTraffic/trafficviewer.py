@@ -2,7 +2,9 @@
 	Isabella Benavente
 	Using Python 2.7.12 and pypcap
 	Traffic Viewer Module 
-	USAGE: $ python trafficviewer.py -i en0 -c 6
+	USAGE: 
+		INT  - $ python trafficviewer.py -i en0 -c 6
+		READ - $ python trafficviewer.py -r icmp.pcap -c 5
 """
 #!/usr/bin/python2 
 
@@ -24,30 +26,56 @@ class Viewer():
 	count = ''
 	interface = ''
 
-	def __init__(self):        
-		# Init socket, parameters are to specify internet, raw socket, and int type
-		# Need to run as root for ICMP (use sudo)
-		try:
-			self.sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
-			#self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-		except socket.error, message:
-			print 'Socket creation failed. Error: ' + str(message[0]) + ' Message ' + message[1]
-			sys.exit()
+	def printPcap(self, source):
+		i = 0
+		source.setfilter('icmp') # We only care about ICMP
 
-	def showSummary(self):
-		pavg = (self.psum / self.sent)
-		ppct = (self.lost / self.sent) * 100
-		if self.rcvd == 0:
-			self.pmin = 0
+		addr = lambda packet, offset: '.'.join(str(ord(packet[i])) for i in xrange(offset, offset + 4)).ljust(16)
+		oneByte = lambda packet, offset: ''.join(str(ord(packet[i])) for i in xrange(offset, offset + 1)).ljust(4)
+		twoByte = lambda packet, offset: ''.join(str(ord(packet[i])) for i in xrange(offset, offset + 2)).ljust(8)
+		fourByte = lambda packet, offset: ''.join(str(ord(packet[i])) for i in xrange(offset, offset + 16)).ljust(16)
 
-		print "Ping statistics for " + self.dst
-		print "  Packets: Sent = " + str(self.sent) + ", Received = " + str(self.rcvd) + ", Lost = " + str(self.lost) + " (" +  str(ppct) + "% loss)"
+		for t, p in source:
+			if i >= self.count:
+				break
 
-		if self.rcvd > 0:
-			print "  Approximate round trip times in milli-seconds:"
-			print "  Minimum = " +  str(self.pmin) + "ms, Maximum = " + str(self.pmax) + "ms, Average = " + str(pavg) + "ms"
+			icmpCode = self.translateICMPCode(oneByte(p, source.dloff + 20))
 
+			print "{0:.6f}".format(t),	# print timestamp with 6 decimals
+			print addr(p, source.dloff + 12) + ">  " + addr(p, source.dloff + 16),
+			print "| ICMP " + icmpCode.ljust(16),
+			print "id: " + twoByte(p, source.dloff + 24) + "   seq: " + twoByte(p, source.dloff + 26),
+			print "length: " + twoByte(p, source.dloff + 2)
+			i += 1
 	
+	def translateICMPCode(self, code):
+		# Reference to ICMP Type Numbers: https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml
+		# Only going to translate codes up to 0-12 so this doesn't get unruly and long 
+		code = int(code)
+
+		if code == 0:
+			return "echo reply"
+		elif code == 3:
+			return "destination unreachable"
+		elif code == 4:
+			return "source quench"			
+		elif code == 5:
+			return "redirect"
+		elif code == 6:
+			return "alternate host address"
+		elif code == 8:
+			return "echo request"
+		elif code == 9:
+			return "router advertisment"
+		elif code == 10:
+			return "router soliciation"
+		elif code == 11:
+			return "time exceeded"
+		elif code == 12:
+			return "parameter problem"
+		elif code == 1 or code == 2 or code == 7:
+			return "unassigned"
+
 	def main(self, argv):
 		"""Main function in PING"""
 
@@ -85,23 +113,18 @@ class Viewer():
 		# Configure log file path, format, and clear file each time using write mode
 		if logfile != '':
 			logging.basicConfig(filename=logfile, level=logging.DEBUG, format='%(message)s', filemode ='w')
-			logging.info("Payload: " + self.payload + ", Count: " + str(self.count) + ", Destination: " + self.dst)
+			logging.info("Count: " + str(self.count))
 
 		if self.interface != '':
 			# Traffic Viewing mode
 			print "Viewer: listening on " + self.interface
-
 			sniffer = pcap.pcap(name=self.interface, immediate=True)
-			addr = lambda packet, offset: '.'.join(str(ord(packet[i])) for i in xrange(offset, offset + 4)).ljust(16)
-			data = lambda packet, offset: "".join(str(ord(packet[i])) for i in xrange(offset, offset + 2)).ljust(8)
-			tcp = lambda packet, offset: "".join(str(ord(packet[i])) for i in xrange(offset, offset + 4)).ljust(16)
-			for timestamp, packet in sniffer:
-				print "{0:.6f}".format(timestamp) + '  ' + addr(packet, sniffer.dloff + 12) + ">  " + addr(packet, sniffer.dloff + 16) + "| " + data(packet, sniffer.dloff + 8) + "id: " + data(packet, sniffer.dloff + 4) + "seq: " + tcp(packet, sniffer.dloff + 28) + "length: " + data(packet, sniffer.dloff + 2)
+			self.printPcap(sniffer)			
 		elif self.read != '':
 			# File Reading mode
-			p = pcap.open(file(self.read))
-			for i in p:
-				print "Packet " + i + " " + p.version + " " + p.length + " " + p.linktype
+			print "Reader: viewing from " + self.read
+			pfile = pcap.pcap(self.read)
+			self.printPcap(pfile)
 
 		logging.info("Exiting network traffic viewer...")
 
