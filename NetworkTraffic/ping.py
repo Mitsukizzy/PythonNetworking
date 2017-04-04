@@ -2,14 +2,16 @@
 	Isabella Benavente
 	Using Python 2.7.12 
 	Ping Tool Module 
-	USAGE: $ python ping.py -d 206.190.36.45 -c 4 -p "hello"
+	USAGE: 
+		CASE 1 - $ sudo python ping.py -d 206.190.36.45 -c 4 -p "hello"
+		CASE 2 - $ sudo python ping.py -d 1.2.3.4 -c 5 -p "Hello"
+		CASE 3 - (Disconnect host from internet and run CASE 1)
 """
 #!/usr/bin/python2 
 
 import socket
 import sys, time
 import struct
-import pcap
 import getopt
 import logging
 import select
@@ -64,12 +66,12 @@ class Ping():
 		answer = answer >> 8 | (answer << 8 & 0xff00)
 		return answer
 
-	def makePacket(self, idnum, payload):
-		checksum = self.getChecksum(payload)
+	def makePacket(self, idnum):
+		checksum = self.getChecksum(self.payload)
 		header = struct.pack("BBHHH", ECHO_CODE, 0, 0, idnum, self.sent)
-		checksum = self.getChecksum(header + payload)
+		checksum = self.getChecksum(header + self.payload)
 		header = struct.pack("BBHHH", ECHO_CODE, 0, socket.htons(checksum), idnum, self.sent)
-		packet = header + payload
+		packet = header + self.payload
 		return packet
 
 	def receive(self, id, timeSent):
@@ -97,13 +99,13 @@ class Ping():
 				self.rcvd += 1
 				return
 
-	def showSummary(self, dst):
+	def showSummary(self):
 		pavg = (self.psum / self.sent)
 		ppct = (self.lost / self.sent) * 100
 		if self.rcvd == 0:
 			self.pmin = 0
 
-		print "Ping statistics for " + dst
+		print "Ping statistics for " + self.dst
 		print "  Packets: Sent = " + str(self.sent) + ", Received = " + str(self.rcvd) + ", Lost = " + str(self.lost) + " (" +  str(ppct) + "% loss)"
 
 		if self.rcvd > 0:
@@ -129,35 +131,40 @@ class Ping():
 			elif opt in ("-l", "--logfile"):
 				logfile = arg
 			elif opt in ("-p", "--payload"):
-				payload = arg
+				self.payload = arg
 			elif opt in ("-c", "--count"):
 				self.count = int(arg)              
 			elif opt in ("-d", "--dst"):
-				dst = arg
+				self.dst = arg
+
+		# Verify command line args
+		if self.payload == '' or self.count == '' or self.dst == '':
+			print "USAGE: sudo test.py -p <payload> -c <count> -d <dst> (OPTIONAL: -l <logfile>)"
+			sys.exit(0)
 
 		# Configure log file path, format, and clear file each time using write mode
 		if logfile != '':
 			logging.basicConfig(filename=logfile, level=logging.DEBUG, format='%(message)s', filemode ='w')
-			logging.info("Payload: " + payload + ", Count: " + str(self.count) + ", Destination: " + dst)
+			logging.info("Payload: " + self.payload + ", Count: " + str(self.count) + ", Destination: " + self.dst)
 
 		self.src = socket.gethostbyname(socket.gethostname())
-		logging.info("Payload: " + payload + ", Count: " + str(self.count) + ", Destination: " + dst)
-
 		disconnected = False
 		initial = True
 
 		# Send out packets
 		for x in range(0, self.count):
 			idnum = random.randrange(65535)
-			packet = self.makePacket(idnum, payload)
+			packet = self.makePacket(idnum)
 
 			try:
-				self.sock.sendto(packet, (dst, 0))
+				self.sock.sendto(packet, (self.dst, 0))
 				if initial:
-					print "Pinging " + dst + " with " + str(len(payload)) + " bytes of data \"" + payload + "\""
+					print "Pinging " + self.dst + " with " + str(len(self.payload)) + " bytes of data \"" + self.payload + "\""
+					logging.info("Pinging " + self.dst + " with " + str(len(self.payload)) + " bytes of data \"" + self.payload + "\"")
 					initial = False
 			except:
 				print "Network is unreachable"
+				logging.info("Network unreachable. Check your internet connection.")
 				disconnected = True
 				break
 			self.sent += 1
@@ -167,7 +174,7 @@ class Ping():
 			self.receive(idnum, timeSent) 
 
 		if not disconnected:
-			self.showSummary(dst)
+			self.showSummary()
 		self.sock.close()
 		logging.info("Exiting ping tool...")
 
