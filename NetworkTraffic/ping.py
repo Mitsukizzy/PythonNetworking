@@ -74,13 +74,14 @@ class Ping():
 		return packet
 
 	def receive(self, id, timeSent):
-		timeLeft = timeSent
+		timeLeft = self.TTL
 		RTT = 0
 		while timeLeft > 0:
+			start = time.time()
 			status = select.select([self.sock], [], [], timeLeft)
-			RTT = time.time() - timeSent
+			RTT = time.time() - start
 			RTT = int(round(RTT * 1000))
-			if RTT > self.TTL:
+			if RTT > self.TTL or status[0] == []:
 				self.lost += 1
 				return
 			data, rcvAddr = self.sock.recvfrom(2048) # buffer size in bytes
@@ -97,10 +98,11 @@ class Ping():
 
 				self.rcvd += 1
 				return
+			timeLeft -= RTT
 
 	def showSummary(self):
 		pavg = (self.psum / self.sent)
-		ppct = (self.lost / self.sent) * 100
+		ppct = (self.lost * 100 / self.sent ) 
 		if self.rcvd == 0:
 			self.pmin = 0
 
